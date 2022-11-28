@@ -1,43 +1,55 @@
-import java.io.IOException;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 
+import javax.naming.ldap.SortKey;
 public class TcpClientDemo {
-    static Socket socket = null;
-    static OutputStream os = null;
-    public static void main(String[] args) {
-        try {
-            //1. 要知道服务器的地址
-            InetAddress serverIP = InetAddress.getByName("127.0.0.1");
-            //2.端口号
-            int port = 9999;
-            //3.建立一个socket连接
-            socket = new Socket(serverIP,port);
+    public static void main(String[] args) throws Exception {
+        // 1. 创建一个socket连接
+        Socket socket = new Socket(InetAddress.getByName("127.0.0.1"),9000);
+        //2. 创建一个输出流
+        OutputStream os = socket.getOutputStream();
 
-            //发送消息
-            os = socket.getOutputStream();
+        //3. 读取文件
+        FileInputStream fis = new FileInputStream(new File("video.mp4"));
 
-            os.write("你好！我是客户端".getBytes());
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }finally{
-            if(socket != null){
-                try {
-                    socket.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            if(os != null){
-                try {
-                    os.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+        //4. 写出文件
+        byte[] buffer = new byte[1024];
+        int len;
+        while((len = fis.read(buffer)) != -1){
+            os.write(buffer,0,len);
         }
-        
+
+        //通知服务器，我已经结束了
+        socket.shutdownOutput();//我已经传输完了
+
+
+        //确定服务器接收文件完毕，才能断开连接
+        InputStream is = socket.getInputStream();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        byte[] buffer2 = new byte[1024];
+        int len2;
+        while((len2 = is.read(buffer2)) != -1){
+            baos.write(buffer2, 0, len2);
+        }
+
+        System.out.println(baos.toString());
+
+
+
+        //5.关闭资源
+        baos.close();
+        is.close();
+        fis.close();
+        os.close();
+        socket.close();
+
+
     }
 }
